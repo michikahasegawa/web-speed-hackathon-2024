@@ -128,9 +128,9 @@ const ComicViewerCore: React.FC<Props> = ({ episodeId }) => {
         pageWidth: (100 * scrollView.getBoundingClientRect().height) / IMAGE_HEIGHT,
         scrollView,
       });
-      scrollView.scrollBy({
+      scrollView.scrollTo({
+        left: scrollView.scrollLeft + scrollToLeft,
         behavior: 'smooth',
-        left: scrollToLeft,
       });
     };
 
