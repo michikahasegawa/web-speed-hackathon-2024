@@ -9,54 +9,6 @@ import { ComicViewerPage } from './ComicViewerPage';
 const IMAGE_WIDTH = 1075;
 const IMAGE_HEIGHT = 1518;
 
-function getScrollToLeft({
-  pageCountParView,
-  pageWidth,
-  scrollView,
-}: {
-  pageCountParView: number;
-  pageWidth: number;
-  scrollView: HTMLDivElement;
-}) {
-  const scrollViewClientRect = scrollView.getBoundingClientRect();
-  const scrollViewCenterX = (scrollViewClientRect.left + scrollViewClientRect.right) / 2;
-
-  const children = Array.from(scrollView.children) as HTMLDivElement[];
-
-  let scrollToLeft = Number.MAX_SAFE_INTEGER;
-
-  for (let times = 0; times < 100; times++) {
-    for (const [idx, child] of children.entries()) {
-      const nthChild = idx + 1;
-      const elementClientRect = child.getBoundingClientRect();
-
-      const scrollMargin =
-        pageCountParView === 2
-          ? {
-              left: nthChild % 2 === 0 ? pageWidth : 0,
-              right: nthChild % 2 === 1 ? pageWidth : 0,
-            }
-          : { left: 0, right: 0 };
-
-      const areaClientRect = {
-        bottom: elementClientRect.bottom,
-        left: elementClientRect.left - scrollMargin.left,
-        right: elementClientRect.right + scrollMargin.right,
-        top: elementClientRect.top,
-      };
-
-      const areaCenterX = (areaClientRect.left + areaClientRect.right) / 2;
-      const candidateScrollToLeft = areaCenterX - scrollViewCenterX;
-
-      if (Math.abs(candidateScrollToLeft) < Math.abs(scrollToLeft)) {
-        scrollToLeft = candidateScrollToLeft;
-      }
-    }
-  }
-
-  return scrollToLeft;
-}
-
 const Container = styled.div`
   position: relative;
 `;
@@ -123,11 +75,20 @@ const ComicViewerCore: React.FC<Props> = ({ episodeId }) => {
     if (!scrollView) return;
 
     const handleScroll = () => {
-      const scrollToLeft = getScrollToLeft({
-        pageCountParView,
-        pageWidth: (100 * scrollView.getBoundingClientRect().height) / IMAGE_HEIGHT,
-        scrollView,
-      });
+      const scrollViewCenterX = scrollView.getBoundingClientRect().width / 2;
+      const children = Array.from(scrollView.children) as HTMLDivElement[];
+
+      let scrollToLeft = Number.MAX_SAFE_INTEGER;
+
+      for (const child of children) {
+        const childCenterX = child.getBoundingClientRect().left + child.getBoundingClientRect().width / 2;
+        const candidateScrollToLeft = childCenterX - scrollViewCenterX;
+
+        if (Math.abs(candidateScrollToLeft) < Math.abs(scrollToLeft)) {
+          scrollToLeft = candidateScrollToLeft;
+        }
+      }
+
       scrollView.scrollTo({
         left: scrollView.scrollLeft + scrollToLeft,
         behavior: 'smooth',
@@ -139,7 +100,7 @@ const ComicViewerCore: React.FC<Props> = ({ episodeId }) => {
     return () => {
       scrollView.removeEventListener('scroll', handleScroll);
     };
-  }, [pageCountParView]);
+  }, []);
 
   return (
     <Container ref={containerRef}>
