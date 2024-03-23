@@ -7,10 +7,8 @@ import { decrypt } from '@wsh-2024/image-encrypt/src/decrypt';
 import { getImageUrl } from '../../../lib/image/getImageUrl';
 
 const _Canvas = styled.canvas`
-  height: 100%;
-  width: auto;
-  flex-grow: 0;
-  flex-shrink: 0;
+  height: auto; /* 高さを自動調整 */
+  width: 100%; /* 幅を100%に */
 `;
 
 type Props = {
