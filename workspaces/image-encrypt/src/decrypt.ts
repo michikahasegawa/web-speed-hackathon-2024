@@ -20,11 +20,27 @@ export async function decrypt({
 
   exportCanvasContext.drawImage(sourceImage, 0, 0);
 
-  for (const { from, to } of MAPPING) {
-    const srcX = columnOffsetPixel + from.column * columnPixel;
-    const srcY = rowOffsetPixel + from.row * rowPixel;
-    const destX = columnOffsetPixel + to.column * columnPixel;
-    const destY = rowOffsetPixel + to.row * rowPixel;
-    exportCanvasContext.drawImage(sourceImage, srcX, srcY, columnPixel, rowPixel, destX, destY, columnPixel, rowPixel);
-  }
+  // 並列処理を導入して処理速度を向上させる
+  await Promise.all(
+    MAPPING.map(({ from, to }) => {
+      const srcX = columnOffsetPixel + from.column * columnPixel;
+      const srcY = rowOffsetPixel + from.row * rowPixel;
+      const destX = columnOffsetPixel + to.column * columnPixel;
+      const destY = rowOffsetPixel + to.row * rowPixel;
+      return new Promise<void>((resolve) => {
+        exportCanvasContext.drawImage(
+          sourceImage,
+          srcX,
+          srcY,
+          columnPixel,
+          rowPixel,
+          destX,
+          destY,
+          columnPixel,
+          rowPixel,
+          () => resolve()
+        );
+      });
+    })
+  );
 }
