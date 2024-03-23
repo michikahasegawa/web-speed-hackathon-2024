@@ -1,6 +1,5 @@
-import { Suspense, useId } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import type { RouteParams } from 'regexparam';
 import { styled } from 'styled-components';
 import invariant from 'tiny-invariant';
 
@@ -32,47 +31,57 @@ const _AuthorImageWrapper = styled.div`
 `;
 
 const AuthorDetailPage: React.FC = () => {
-  const { authorId } = useParams<RouteParams<'/authors/:authorId'>>();
+  const { authorId } = useParams();
   invariant(authorId);
 
-  const { data: author } = useAuthor({ params: { authorId } });
+  const [authorData, setAuthorData] = useState(null);
+  const imageUrl = useImage({ height: 128, imageId: authorData?.image.id, width: 128 });
 
-  const imageUrl = useImage({ height: 128, imageId: author.image.id, width: 128 });
-  const bookListA11yId = useId();
+  useEffect(() => {
+    const fetchAuthorData = async () => {
+      const author = await useAuthor({ params: { authorId } });
+      setAuthorData(author);
+    };
+    fetchAuthorData();
+  }, [authorId]);
+
+  if (!authorData) {
+    return null; // データが取得されるまでローディングを表示する
+  }
 
   return (
     <Box height="100%" px={Space * 2}>
       <_HeadingWrapper aria-label="作者情報">
         {imageUrl != null && (
           <_AuthorImageWrapper>
-            <Image key={author.id} alt={author.name} height={128} objectFit="cover" src={imageUrl} width={128} />
+            <Image key={authorData.id} alt={authorData.name} height={128} objectFit="cover" src={imageUrl} width={128} />
           </_AuthorImageWrapper>
         )}
 
         <Flex align="flex-start" direction="column" gap={Space * 1} justify="flex-start">
           <Text color={Color.MONO_100} typography={Typography.NORMAL20} weight="bold">
-            {author.name}
+            {authorData.name}
           </Text>
           <Text as="p" color={Color.MONO_100} typography={Typography.NORMAL14}>
-            {author.description}
+            {authorData.description}
           </Text>
         </Flex>
       </_HeadingWrapper>
 
       <Separator />
 
-      <Box aria-labelledby={bookListA11yId} as="section" maxWidth="100%" py={Space * 2} width="100%">
-        <Text as="h2" color={Color.MONO_100} id={bookListA11yId} typography={Typography.NORMAL20} weight="bold">
+      <Box as="section" maxWidth="100%" py={Space * 2} width="100%">
+        <Text as="h2" color={Color.MONO_100} typography={Typography.NORMAL20} weight="bold">
           作品一覧
         </Text>
 
         <Spacer height={Space * 2} />
 
         <Flex align="center" as="ul" direction="column" justify="center">
-          {author.books.map((book) => (
+          {authorData.books.map((book) => (
             <BookListItem key={book.id} bookId={book.id} />
           ))}
-          {author.books.length === 0 && (
+          {authorData.books.length === 0 && (
             <>
               <Spacer height={Space * 2} />
               <Text color={Color.MONO_100} typography={Typography.NORMAL14}>
@@ -86,12 +95,4 @@ const AuthorDetailPage: React.FC = () => {
   );
 };
 
-const AuthorDetailPageWithSuspense: React.FC = () => {
-  return (
-    <Suspense fallback={null}>
-      <AuthorDetailPage />
-    </Suspense>
-  );
-};
-
-export { AuthorDetailPageWithSuspense as AuthorDetailPage };
+export { AuthorDetailPage }; // Suspenseを使わないため、別のコンポーネントに分ける必要はない
