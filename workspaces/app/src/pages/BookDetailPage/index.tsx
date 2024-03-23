@@ -1,13 +1,11 @@
-import { useAtom } from 'jotai/react';
-import { Suspense, useCallback } from 'react';
+import React, { useMemo } from 'react';
 import { useParams } from 'react-router-dom';
-import type { RouteParams } from 'regexparam';
 import { styled } from 'styled-components';
 import invariant from 'tiny-invariant';
+import { useAtom } from 'jotai/react';
 
 import { FavoriteBookAtomFamily } from '../../features/book/atoms/FavoriteBookAtomFamily';
 import { useBook } from '../../features/book/hooks/useBook';
-import { EpisodeListItem } from '../../features/episode/components/EpisodeListItem';
 import { useEpisodeList } from '../../features/episode/hooks/useEpisodeList';
 import { Box } from '../../foundation/components/Box';
 import { Flex } from '../../foundation/components/Flex';
@@ -16,7 +14,6 @@ import { Link } from '../../foundation/components/Link';
 import { Separator } from '../../foundation/components/Separator';
 import { Spacer } from '../../foundation/components/Spacer';
 import { Text } from '../../foundation/components/Text';
-import { useImage } from '../../foundation/hooks/useImage';
 import { Color, Space, Typography } from '../../foundation/styles/variables';
 
 import { BottomNavigator } from './internal/BottomNavigator';
@@ -46,7 +43,7 @@ const _AvatarWrapper = styled.div`
 `;
 
 const BookDetailPage: React.FC = () => {
-  const { bookId } = useParams<RouteParams<'/books/:bookId'>>();
+  const { bookId } = useParams();
   invariant(bookId);
 
   const { data: book } = useBook({ params: { bookId } });
@@ -54,14 +51,10 @@ const BookDetailPage: React.FC = () => {
 
   const [isFavorite, toggleFavorite] = useAtom(FavoriteBookAtomFamily(bookId));
 
-  const bookImageUrl = useImage({ height: 256, imageId: book.image.id, width: 192 });
-  const auhtorImageUrl = useImage({ height: 32, imageId: book.author.image.id, width: 32 });
+  const bookImageUrl = useMemo(() => useImage({ height: 256, imageId: book?.image.id, width: 192 }), [book?.image.id]);
+  const authorImageUrl = useMemo(() => useImage({ height: 32, imageId: book?.author.image.id, width: 32 }), [book?.author.image.id]);
 
-  const handleFavClick = useCallback(() => {
-    toggleFavorite();
-  }, [toggleFavorite]);
-
-  const latestEpisode = episodeList?.find((episode) => episode.chapter === 1);
+  const latestEpisode = useMemo(() => episodeList?.find((episode) => episode.chapter === 1), [episodeList]);
 
   return (
     <Box height="100%" position="relative" px={Space * 2}>
@@ -83,9 +76,9 @@ const BookDetailPage: React.FC = () => {
           <Spacer height={Space * 1} />
 
           <_AuthorWrapper href={`/authors/${book.author.id}`}>
-            {auhtorImageUrl != null && (
+            {authorImageUrl != null && (
               <_AvatarWrapper>
-                <Image alt={book.author.name} height={32} objectFit="cover" src={auhtorImageUrl} width={32} />
+                <Image alt={book.author.name} height={32} objectFit="cover" src={authorImageUrl} width={32} />
               </_AvatarWrapper>
             )}
             <Text color={Color.MONO_100} typography={Typography.NORMAL14}>
@@ -99,7 +92,7 @@ const BookDetailPage: React.FC = () => {
         bookId={bookId}
         isFavorite={isFavorite}
         latestEpisodeId={latestEpisode?.id ?? ''}
-        onClickFav={handleFavClick}
+        onClickFav={toggleFavorite}
       />
 
       <Separator />
@@ -123,12 +116,4 @@ const BookDetailPage: React.FC = () => {
   );
 };
 
-const BookDetailPageWithSuspense: React.FC = () => {
-  return (
-    <Suspense fallback={null}>
-      <BookDetailPage />
-    </Suspense>
-  );
-};
-
-export { BookDetailPageWithSuspense as BookDetailPage };
+export default BookDetailPage;
