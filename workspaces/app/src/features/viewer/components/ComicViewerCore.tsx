@@ -25,7 +25,7 @@ function getScrollToLeft({
 
   let scrollToLeft = Number.MAX_SAFE_INTEGER;
 
-  for (let times = 0; times < 2; times++) {
+  for (let times = 0; times < 100; times++) {
     for (const [idx, child] of children.entries()) {
       const nthChild = idx + 1;
       const elementClientRect = child.getBoundingClientRect();
