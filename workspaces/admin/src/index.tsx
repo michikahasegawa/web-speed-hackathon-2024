@@ -40,3 +40,5 @@ export const AdminApp: React.FC = () => {
     </Suspense>
   );
 };
+
+export default AdminApp;
