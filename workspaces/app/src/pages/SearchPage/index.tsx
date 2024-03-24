@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useEffect, useId, useState } from 'react';
+import { Suspense, useCallback, useEffect, useId, useMemo, useState } from 'react';
 
 import { useBookList } from '../../features/book/hooks/useBookList';
 import { Box } from '../../foundation/components/Box';
@@ -9,7 +9,7 @@ import { Input } from './internal/Input';
 import { SearchResult } from './internal/SearchResult';
 
 const SearchPage: React.FC = () => {
-  const { data: books } = useBookList({ query: {} });
+  const { data: books, isLoading } = useBookList({ query: {} });
 
   const searchResultsA11yId = useId();
 
@@ -27,6 +27,12 @@ const SearchPage: React.FC = () => {
     setIsClient(true);
   }, []);
 
+  // キーワードが変更されたときに検索結果を再計算する
+  const filteredBooks = useMemo(() => {
+    if (!books || keyword === '') return [];
+    return books.filter(book => book.title.includes(keyword));
+  }, [books, keyword]);
+
   return (
     <Box px={Space * 2}>
       <Input disabled={!isClient} onChange={onChangedInput} />
@@ -34,7 +40,8 @@ const SearchPage: React.FC = () => {
         <Text color={Color.MONO_100} id={searchResultsA11yId} typography={Typography.NORMAL20} weight="bold">
           検索結果
         </Text>
-        {keyword !== '' && <SearchResult books={books} keyword={keyword} />}
+        {/* データの取得中は検索結果を表示しない */}
+        {!isLoading && keyword !== '' && <SearchResult books={filteredBooks} keyword={keyword} />}
       </Box>
     </Box>
   );
