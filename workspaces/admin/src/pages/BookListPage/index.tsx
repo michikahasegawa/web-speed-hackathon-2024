@@ -67,46 +67,52 @@ export const BookListPage: React.FC = () => {
   const { data: bookList = [] } = useBookList();
   const bookListA11yId = useId();
 
-  const formik = useFormik({
-    initialValues: {
-      kind: BookSearchKind.BookId as BookSearchKind,
-      query: '',
-    },
-    onSubmit() {},
+  const [searchParams, setSearchParams] = useState({
+    kind: BookSearchKind.BookId as BookSearchKind,
+    query: '',
   });
 
   const filteredBookList = useMemo(() => {
-    if (formik.values.query === '') {
+    if (searchParams.query === '') {
       return bookList;
     }
 
-    switch (formik.values.kind) {
+    switch (searchParams.kind) {
       case BookSearchKind.BookId: {
-        return bookList.filter((book) => book.id === formik.values.query);
+        return bookList.filter((book) => book.id === searchParams.query);
       }
       case BookSearchKind.BookName: {
         return bookList.filter((book) => {
           return (
-            isContains({ query: formik.values.query, target: book.name }) ||
-            isContains({ query: formik.values.query, target: book.nameRuby })
+            isContains({ query: searchParams.query, target: book.name }) ||
+            isContains({ query: searchParams.query, target: book.nameRuby })
           );
         });
       }
       case BookSearchKind.AuthorId: {
-        return bookList.filter((book) => book.author.id === formik.values.query);
+        return bookList.filter((book) => book.author.id === searchParams.query);
       }
       case BookSearchKind.AuthorName: {
         return bookList.filter((book) => {
-          return isContains({ query: formik.values.query, target: book.author.name });
+          return isContains({ query: searchParams.query, target: book.author.name });
         });
       }
       default: {
+        setSearchParams((prev) => ({ ...prev, kind: BookSearchKind.None }));
         return bookList;
       }
     }
-  }, [formik.values.kind, formik.values.query, bookList]);
+  }, [searchParams, bookList]);
 
-  const modalState = useMemo(() => {
+  const handleRadioChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchParams((prev) => ({ ...prev, kind: event.target.value as BookSearchKind }));
+  };
+
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchParams((prev) => ({ ...prev, query: event.target.value }));
+  };
+
+  const [useModalStore] = useState(() => {
     return create<BookModalState & BookModalAction>()((set) => ({
       ...{
         mode: BookModalMode.None,
@@ -124,48 +130,25 @@ export const BookListPage: React.FC = () => {
         },
       },
     }));
-  }, []);
+  });
+  const modalState = useModalStore();
 
   return (
     <>
       <Stack height="100%" p={4} spacing={6}>
         <StackItem aria-label="検索セクション" as="section">
-          <RadioGroup name="kind" value={formik.values.kind}>
+          <RadioGroup name="kind" value={searchParams.kind} onChange={handleRadioChange}>
             <Stack direction="row" spacing={4}>
-              <Radio
-                color="gray.400"
-                colorScheme="teal"
-                onBlur={formik.handleBlur}
-                onChange={formik.handleChange}
-                value={BookSearchKind.BookId}
-              >
+              <Radio colorScheme="teal" value={BookSearchKind.BookId}>
                 作品 ID
               </Radio>
-              <Radio
-                color="gray.400"
-                colorScheme="teal"
-                onBlur={formik.handleBlur}
-                onChange={formik.handleChange}
-                value={BookSearchKind.BookName}
-              >
+              <Radio colorScheme="teal" value={BookSearchKind.BookName}>
                 作品名
               </Radio>
-              <Radio
-                color="gray.400"
-                colorScheme="teal"
-                onBlur={formik.handleBlur}
-                onChange={formik.handleChange}
-                value={BookSearchKind.AuthorId}
-              >
+              <Radio colorScheme="teal" value={BookSearchKind.AuthorId}>
                 作者 ID
               </Radio>
-              <Radio
-                color="gray.400"
-                colorScheme="teal"
-                onBlur={formik.handleBlur}
-                onChange={formik.handleChange}
-                value={BookSearchKind.AuthorName}
-              >
+              <Radio colorScheme="teal" value={BookSearchKind.AuthorName}>
                 作者名
               </Radio>
             </Stack>
@@ -177,8 +160,8 @@ export const BookListPage: React.FC = () => {
             <Input
               borderColor="gray.400"
               name="query"
-              onBlur={formik.handleBlur}
-              onChange={formik.handleChange}
+              value={searchParams.query}
+              onChange={handleInputChange}
               placeholder="条件を入力"
             />
           </Flex>
@@ -220,4 +203,32 @@ export const BookListPage: React.FC = () => {
                       <Button colorScheme="teal" onClick={() => modalState.openDetail(book.id)} variant="solid">
                         詳細
                       </Button>
-                    </Td
+                    </Td>
+                    <Td verticalAlign="middle">
+                      <Text fontWeight="bold">{book.name}</Text>
+                      <Text color="gray.400" fontSize="small">
+                        {book.id}
+                      </Text>
+                    </Td>
+                    <Td verticalAlign="middle">
+                      <Text fontWeight="bold">{book.author.name}</Text>
+                      <Text color="gray.400" fontSize="small">
+                        {book.author.id}
+                      </Text>
+                    </Td>
+                  </Tr>
+                ))}
+              </Tbody>
+            </Table>
+          </TableContainer>
+        </StackItem>
+      </Stack>
+
+      {modalState.mode === BookModalMode.Detail ? (
+        <BookDetailModal isOpen bookId={modalState.params.bookId} onClose={() => modalState.close()} />
+      ) : null}
+      {modalState.mode === BookModalMode.Create ? <CreateBookModal isOpen onClose={() => modalState.close()} /> : null}
+    </>
+  );
+};
+
