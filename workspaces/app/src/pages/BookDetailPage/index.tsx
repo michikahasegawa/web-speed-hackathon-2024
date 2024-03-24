@@ -1,12 +1,13 @@
-import React, { useCallback } from 'react';
+import { Suspense, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
+import { invariant } from 'tiny-invariant';
 import { styled } from 'styled-components';
-import invariant from 'tiny-invariant';
 import { useAtom } from 'jotai/react';
 
 import { FavoriteBookAtomFamily } from '../../features/book/atoms/FavoriteBookAtomFamily';
 import { useBook } from '../../features/book/hooks/useBook';
 import { useEpisodeList } from '../../features/episode/hooks/useEpisodeList';
+import { EpisodeListItem } from '../../features/episode/components/EpisodeListItem';
 import { Box } from '../../foundation/components/Box';
 import { Flex } from '../../foundation/components/Flex';
 import { Image } from '../../foundation/components/Image';
@@ -44,11 +45,15 @@ const _AvatarWrapper = styled.div`
 `;
 
 const BookDetailPage: React.FC = () => {
-  const { bookId } = useParams<{ bookId: string }>();
+  const { bookId } = useParams<RouteParams<'/books/:bookId'>>();
   invariant(bookId);
 
-  const { data: book } = useBook({ params: { bookId } });
-  const { data: episodeList } = useEpisodeList({ query: { bookId } });
+  // データのフェッチを useMemo でメモ化
+  const { data: bookData } = useBook({ params: { bookId } });
+  const { data: episodeListData } = useEpisodeList({ query: { bookId } });
+
+  const book = useMemo(() => bookData, [bookData]);
+  const episodeList = useMemo(() => episodeListData, [episodeListData]);
 
   const [isFavorite, toggleFavorite] = useAtom(FavoriteBookAtomFamily(bookId));
 
@@ -59,16 +64,12 @@ const BookDetailPage: React.FC = () => {
     toggleFavorite();
   }, [toggleFavorite]);
 
-  const latestEpisode = episodeList?.find((episode) => episode.chapter === 1);
-
-  if (!book || !episodeList) {
-    return null; // データが読み込まれるまで何も表示しない
-  }
+  const latestEpisode = useMemo(() => episodeList?.find((episode) => episode.chapter === 1), [episodeList]);
 
   return (
     <Box height="100%" position="relative" px={Space * 2}>
       <_HeadingWrapper aria-label="作品情報">
-        {bookImageUrl != null && (
+        {bookImageUrl && (
           <Image alt={book.name} height={256} objectFit="cover" src={bookImageUrl} width={192} />
         )}
         <Flex align="flex-start" direction="column" gap={Space * 1} justify="flex-end">
@@ -84,14 +85,14 @@ const BookDetailPage: React.FC = () => {
 
           <Spacer height={Space * 1} />
 
-          <_AuthorWrapper href={`/authors/${book.author.id}`}>
-            {authorImageUrl != null && (
+          <_AuthorWrapper href={`/authors/${book?.author.id}`}>
+            {authorImageUrl && (
               <_AvatarWrapper>
-                <Image alt={book.author.name} height={32} objectFit="cover" src={authorImageUrl} width={32} />
+                <Image alt={book?.author.name} height={32} objectFit="cover" src={authorImageUrl} width={32} />
               </_AvatarWrapper>
             )}
             <Text color={Color.MONO_100} typography={Typography.NORMAL14}>
-              {book.author.name}
+              {book?.author.name}
             </Text>
           </_AuthorWrapper>
         </Flex>
@@ -100,37 +101,3 @@ const BookDetailPage: React.FC = () => {
       <BottomNavigator
         bookId={bookId}
         isFavorite={isFavorite}
-        latestEpisodeId={latestEpisode?.id ?? ''}
-        onClickFav={handleFavClick}
-      />
-
-      <Separator />
-
-      <section aria-label="エピソード一覧">
-        <Flex align="center" as="ul" direction="column" justify="center">
-          {episodeList.map((episode) => (
-            <EpisodeListItem key={episode.id} bookId={bookId} episodeId={episode.id} />
-          ))}
-          {episodeList.length === 0 && (
-            <>
-              <Spacer height={Space * 2} />
-              <Text color={Color.MONO_100} typography={Typography.NORMAL14}>
-                この作品はまだエピソードがありません
-              </Text>
-            </>
-          )}
-        </Flex>
-      </section>
-    </Box>
-  );
-};
-
-const BookDetailPageWithSuspense: React.FC = () => {
-  return (
-    <Suspense fallback={null}>
-      <BookDetailPage />
-    </Suspense>
-  );
-};
-
-export { BookDetailPageWithSuspense as BookDetailPage };
