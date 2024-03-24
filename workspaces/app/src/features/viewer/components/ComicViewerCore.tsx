@@ -1,4 +1,5 @@
-import { useRef, useState, useEffect } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
+import { useInterval, useUpdate } from 'react-use';
 import styled from 'styled-components';
 
 import { addUnitIfNeeded } from '../../../lib/css/addUnitIfNeeded';
@@ -9,11 +10,11 @@ import { ComicViewerPage } from './ComicViewerPage';
 const IMAGE_WIDTH = 1075;
 const IMAGE_HEIGHT = 1518;
 
-const Container = styled.div`
+const _Container = styled.div`
   position: relative;
 `;
 
-const Wrapper = styled.div<{
+const _Wrapper = styled.div<{
   $paddingInline: number;
   $pageWidth: number;
 }>`
@@ -41,78 +42,86 @@ type Props = {
 };
 
 const ComicViewerCore: React.FC<Props> = ({ episodeId }) => {
+  const rerender = useUpdate();
+  useInterval(rerender, 0);
+
   const { data: episode } = useEpisode({ params: { episodeId } });
-  const [scrollView, scrollViewRef] = useState<HTMLDivElement | null>(null);
 
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const pageCountParViewRef = useRef<number>(1);
-  const pageWidthRef = useRef<number>(0);
-  const viewerPaddingInlineRef = useRef<number>(0);
+  const [container, setContainer] = useState<HTMLDivElement | null>(null);
+  const [scrollView, setScrollView] = useState<HTMLDivElement | null>(null);
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const scrollViewRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const handleResize = () => {
-      const cqw = container.getBoundingClientRect().width / 100;
-      const cqh = container.getBoundingClientRect().height / 100;
-
-      pageCountParViewRef.current = (100 * cqw) / (100 * cqh) < (2 * IMAGE_WIDTH) / IMAGE_HEIGHT ? 1 : 2;
-      pageWidthRef.current = ((100 * cqh) / IMAGE_HEIGHT) * IMAGE_WIDTH;
-      viewerPaddingInlineRef.current =
-        (100 * cqw - pageWidthRef.current * pageCountParViewRef.current) / 2 + (pageCountParViewRef.current === 2 ? pageWidthRef.current : 0);
-    };
-
-    handleResize();
-
-    const resizeObserver = new ResizeObserver(handleResize);
-    resizeObserver.observe(container);
-
-    return () => {
-      resizeObserver.disconnect();
-    };
+    setContainer(containerRef.current);
+    setScrollView(scrollViewRef.current);
   }, []);
 
   useEffect(() => {
-    const scrollView = scrollViewRef.current;
-    if (!scrollView) return;
+    if (!scrollView || !container || !episode) return;
 
-    const handleScroll = () => {
-      const scrollViewCenterX = scrollView.getBoundingClientRect().width / 2;
-      const children = Array.from(scrollView.children) as HTMLDivElement[];
+    const pageCountParView = (container.getBoundingClientRect().width / 100) / ((2 * IMAGE_WIDTH) / IMAGE_HEIGHT) < 2 ? 1 : 2;
+    const pageWidth = ((container.getBoundingClientRect().height / 100) / IMAGE_HEIGHT) * IMAGE_WIDTH;
+    const viewerPaddingInline = (container.getBoundingClientRect().width / 100 - pageWidth * pageCountParView) / 2 + (pageCountParView === 2 ? pageWidth : 0);
 
-      let scrollToLeft = Number.MAX_SAFE_INTEGER;
+    let isPressed = false;
+    let scrollToLeftWhenScrollEnd = 0;
 
-      for (const child of children) {
-        const childCenterX = child.getBoundingClientRect().left + child.getBoundingClientRect().width / 2;
-        const candidateScrollToLeft = childCenterX - scrollViewCenterX;
+    const handlePointerDown = (ev: PointerEvent) => {
+      isPressed = true;
+      scrollView.style.cursor = 'grabbing';
+      scrollView.setPointerCapture(ev.pointerId);
+      scrollToLeftWhenScrollEnd = scrollView.scrollLeft;
+    };
 
-        if (Math.abs(candidateScrollToLeft) < Math.abs(scrollToLeft)) {
-          scrollToLeft = candidateScrollToLeft;
-        }
+    const handlePointerMove = (ev: PointerEvent) => {
+      if (isPressed) {
+        scrollView.scrollBy({
+          behavior: 'instant',
+          left: -1 * ev.movementX,
+        });
+        scrollToLeftWhenScrollEnd = scrollView.scrollLeft;
       }
-
-      scrollView.scrollTo({
-        left: scrollView.scrollLeft + scrollToLeft,
-        behavior: 'smooth',
-      });
     };
 
-    scrollView.addEventListener('scroll', handleScroll);
+    const handlePointerUp = () => {
+      isPressed = false;
+      scrollView.style.cursor = 'grab';
+    };
+
+    const handleScrollEnd = () => {
+      if (!isPressed) {
+        scrollView.scrollTo({
+          behavior: 'smooth',
+          left: scrollToLeftWhenScrollEnd,
+        });
+      }
+    };
+
+    scrollView.addEventListener('pointerdown', handlePointerDown);
+    scrollView.addEventListener('pointermove', handlePointerMove);
+    scrollView.addEventListener('pointerup', handlePointerUp);
+    scrollView.addEventListener('scroll', handleScrollEnd);
 
     return () => {
-      scrollView.removeEventListener('scroll', handleScroll);
+      scrollView.removeEventListener('pointerdown', handlePointerDown);
+      scrollView.removeEventListener('pointermove', handlePointerMove);
+      scrollView.removeEventListener('pointerup', handlePointerUp);
+      scrollView.removeEventListener('scroll', handleScrollEnd);
     };
-  }, []);
+  }, [episode, scrollView, container]);
+
+  if (!episode) return null;
 
   return (
-    <Container ref={containerRef}>
-      <Wrapper ref={scrollViewRef} $paddingInline={viewerPaddingInlineRef.current} $pageWidth={pageWidthRef.current}>
-        {episode?.pages.map((page) => (
+    <_Container ref={containerRef}>
+      <_Wrapper ref={scrollViewRef} $paddingInline={viewerPaddingInline} $pageWidth={(container?.getBoundingClientRect().height ?? 0) / 100 * IMAGE_WIDTH}>
+        {episode.pages.map((page) => (
           <ComicViewerPage key={page.id} pageImageId={page.image.id} />
         ))}
-      </Wrapper>
-    </Container>
+      </_Wrapper>
+    </_Container>
   );
 };
 
