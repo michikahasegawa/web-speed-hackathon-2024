@@ -1,6 +1,5 @@
 import { Suspense } from 'react';
 import { useParams } from 'react-router-dom';
-import type { RouteParams } from 'regexparam';
 import invariant from 'tiny-invariant';
 
 import { useBook } from '../../features/book/hooks/useBook';
@@ -18,24 +17,19 @@ const EpisodeDetailPage: React.FC = () => {
   invariant(bookId);
   invariant(episodeId);
 
-  const { data: book } = useBook({ params: { bookId } });
+  // 現在のエピソードのデータのみを読み込む
   const { data: episode } = useEpisode({ params: { episodeId } });
 
+  if (!episode) {
+    return <Suspense fallback={null} />;
+  }
+
+  // 漫画ビューアーの表示
   return (
     <Box>
       <section aria-label="漫画ビューアー">
         <ComicViewer episodeId={episode.id} />
       </section>
-
-      <Separator />
-
-      <Box aria-label="エピソード一覧" as="section" px={Space * 2}>
-        <Flex align="center" as="ul" direction="column" justify="center">
-          {book.episodes.map((episode) => (
-            <EpisodeListItem key={episode.id} bookId={bookId} episodeId={episode.id} />
-          ))}
-        </Flex>
-      </Box>
     </Box>
   );
 };
