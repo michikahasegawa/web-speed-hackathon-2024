@@ -18,7 +18,7 @@ import {
   Tr,
 } from '@chakra-ui/react';
 import { useFormik } from 'formik';
-import { useId, useMemo, useState } from 'react';
+import { useId, useState } from 'react';
 import _ from 'underscore';
 import { create } from 'zustand';
 
@@ -119,24 +119,12 @@ export const AuthorListPage: React.FC = () => {
     <>
       <Stack height="100%" p={4} spacing={6}>
         <StackItem aria-label="検索セクション" as="section">
-          <RadioGroup name="kind" value={formik.values.kind}>
+          <RadioGroup name="kind" value={formik.values.kind} onChange={formik.handleChange}>
             <Stack direction="row" spacing={4}>
-              <Radio
-                color="gray.400"
-                colorScheme="teal"
-                onBlur={formik.handleBlur}
-                onChange={formik.handleChange}
-                value={AuthorSearchKind.AuthorId}
-              >
+              <Radio colorScheme="teal" value={AuthorSearchKind.AuthorId}>
                 作者 ID
               </Radio>
-              <Radio
-                color="gray.400"
-                colorScheme="teal"
-                onBlur={formik.handleBlur}
-                onChange={formik.handleChange}
-                value={AuthorSearchKind.AuthorName}
-              >
+              <Radio colorScheme="teal" value={AuthorSearchKind.AuthorName}>
                 作者名
               </Radio>
             </Stack>
@@ -148,7 +136,6 @@ export const AuthorListPage: React.FC = () => {
             <Input
               borderColor="gray.400"
               name="query"
-              onBlur={formik.handleBlur}
               onChange={formik.handleChange}
               placeholder="条件を入力"
             />
@@ -171,7 +158,7 @@ export const AuthorListPage: React.FC = () => {
             <Text as="h2" fontSize="xl" fontWeight="bold" id={authorListA11yId}>
               作者一覧
             </Text>
-            <Button colorScheme="teal" onClick={() => modalState.openCreate()} variant="solid">
+            <Button colorScheme="teal" onClick={modalState.openCreate} variant="solid">
               作者を追加
             </Button>
           </Flex>
@@ -205,12 +192,12 @@ export const AuthorListPage: React.FC = () => {
         </StackItem>
       </Stack>
 
-      {modalState.mode === AuthorModalMode.Detail ? (
-        <AuthorDetailModal isOpen authorId={modalState.params.authorId} onClose={() => modalState.close()} />
-      ) : null}
-      {modalState.mode === AuthorModalMode.Create ? (
-        <CreateAuthorModal isOpen onClose={() => modalState.close()} />
-      ) : null}
+      {modalState.mode === AuthorModalMode.Detail && (
+        <AuthorDetailModal isOpen authorId={modalState.params.authorId} onClose={modalState.close} />
+      )}
+      {modalState.mode === AuthorModalMode.Create && (
+        <CreateAuthorModal isOpen onClose={modalState.close} />
+      )}
     </>
   );
 };
