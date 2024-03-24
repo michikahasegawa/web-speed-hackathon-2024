@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import styled from 'styled-components';
 
 import { ComicViewerCore } from '../../../features/viewer/components/ComicViewerCore';
@@ -45,8 +45,26 @@ export const ComicViewer: React.FC<Props> = ({ episodeId }) => {
 
     handleResize();
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    const handleThrottledResize = () => {
+      let throttleTimer: ReturnType<typeof setTimeout>;
+
+      return () => {
+        if (!throttleTimer) {
+          throttleTimer = setTimeout(() => {
+            throttleTimer = undefined;
+            handleResize();
+          }, 200);
+        }
+      };
+    };
+
+    const throttledResizeHandler = handleThrottledResize();
+
+    window.addEventListener('resize', throttledResizeHandler);
+
+    return () => {
+      window.removeEventListener('resize', throttledResizeHandler);
+    };
   }, []);
 
   return (
@@ -57,4 +75,3 @@ export const ComicViewer: React.FC<Props> = ({ episodeId }) => {
     </_Container>
   );
 };
-
