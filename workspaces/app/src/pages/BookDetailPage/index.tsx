@@ -1,5 +1,5 @@
 import { useAtom } from 'jotai/react';
-import { Suspense, useCallback } from 'react';
+import { Suspense, useCallback, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import type { RouteParams } from 'regexparam';
 import { styled } from 'styled-components';
@@ -21,7 +21,6 @@ import { Color, Space, Typography } from '../../foundation/styles/variables';
 
 import { BottomNavigator } from './internal/BottomNavigator';
 
-// コンポーネントのメモ化
 const _HeadingWrapper = styled.section`
   display: grid;
   align-items: start;
@@ -46,29 +45,37 @@ const _AvatarWrapper = styled.div`
   }
 `;
 
-const BookDetailPage: React.FC = React.memo(() => {
+const BookDetailPage: React.FC = () => {
   const { bookId } = useParams<RouteParams<'/books/:bookId'>>();
   invariant(bookId);
 
-  // useBook と useEpisodeList フックのメモ化
   const { data: book } = useBook({ params: { bookId } });
+
+  // エピソード一覧の読み込みを非同期で行う
   const { data: episodeList } = useEpisodeList({ query: { bookId } });
 
   const [isFavorite, toggleFavorite] = useAtom(FavoriteBookAtomFamily(bookId));
 
   const bookImageUrl = useImage({ height: 256, imageId: book.image.id, width: 192 });
-  const auhtorImageUrl = useImage({ height: 32, imageId: book.author.image.id, width: 32 });
+  const authorImageUrl = useImage({ height: 32, imageId: book.author.image.id, width: 32 });
 
   const handleFavClick = useCallback(() => {
     toggleFavorite();
   }, [toggleFavorite]);
+
+  useEffect(() => {
+    // 不要なデータの読み込みを避けるため、エピソード一覧の読み込みをここで行う
+    if (!episodeList) {
+      useEpisodeList({ query: { bookId } });
+    }
+  }, [bookId, episodeList]);
 
   const latestEpisode = episodeList?.find((episode) => episode.chapter === 1);
 
   return (
     <Box height="100%" position="relative" px={Space * 2}>
       <_HeadingWrapper aria-label="作品情報">
-        {bookImageUrl != null && (
+        {bookImageUrl && (
           <Image alt={book.name} height={256} objectFit="cover" src={bookImageUrl} width={192} />
         )}
         <Flex align="flex-start" direction="column" gap={Space * 1} justify="flex-end">
@@ -85,9 +92,9 @@ const BookDetailPage: React.FC = React.memo(() => {
           <Spacer height={Space * 1} />
 
           <_AuthorWrapper href={`/authors/${book.author.id}`}>
-            {auhtorImageUrl != null && (
+            {authorImageUrl && (
               <_AvatarWrapper>
-                <Image alt={book.author.name} height={32} objectFit="cover" src={auhtorImageUrl} width={32} />
+                <Image alt={book.author.name} height={32} objectFit="cover" src={authorImageUrl} width={32} />
               </_AvatarWrapper>
             )}
             <Text color={Color.MONO_100} typography={Typography.NORMAL14}>
@@ -108,10 +115,11 @@ const BookDetailPage: React.FC = React.memo(() => {
 
       <section aria-label="エピソード一覧">
         <Flex align="center" as="ul" direction="column" justify="center">
-          {episodeList.map((episode) => (
-            <EpisodeListItem key={episode.id} bookId={bookId} episodeId={episode.id} />
-          ))}
-          {episodeList.length === 0 && (
+          {episodeList &&
+            episodeList.map((episode) => (
+              <EpisodeListItem key={episode.id} bookId={bookId} episodeId={episode.id} />
+            ))}
+          {!episodeList && (
             <>
               <Spacer height={Space * 2} />
               <Text color={Color.MONO_100} typography={Typography.NORMAL14}>
@@ -123,7 +131,7 @@ const BookDetailPage: React.FC = React.memo(() => {
       </section>
     </Box>
   );
-});
+};
 
 const BookDetailPageWithSuspense: React.FC = () => {
   return (
