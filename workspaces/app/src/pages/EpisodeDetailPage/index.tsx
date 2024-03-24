@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { useParams } from 'react-router-dom';
-import { invariant } from 'tiny-invariant';
+import type { RouteParams } from 'regexparam';
+import invariant from 'tiny-invariant';
 
 import { useBook } from '../../features/book/hooks/useBook';
 import { EpisodeListItem } from '../../features/episode/components/EpisodeListItem';
@@ -22,17 +23,15 @@ const EpisodeDetailPage: React.FC = () => {
 
   return (
     <Box>
-      {episode && (
-        <section aria-label="漫画ビューアー">
-          <ComicViewer episodeId={episode.id} />
-        </section>
-      )}
+      <section aria-label="漫画ビューアー">
+        <ComicViewer episodeId={episode.id} />
+      </section>
 
       <Separator />
 
       <Box aria-label="エピソード一覧" as="section" px={Space * 2}>
         <Flex align="center" as="ul" direction="column" justify="center">
-          {book && book.episodes.map((episode) => (
+          {book.episodes.map((episode) => (
             <EpisodeListItem key={episode.id} bookId={bookId} episodeId={episode.id} />
           ))}
         </Flex>
