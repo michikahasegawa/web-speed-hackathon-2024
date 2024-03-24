@@ -101,13 +101,12 @@ export const BookListPage: React.FC = () => {
         });
       }
       default: {
-        formik.values.kind satisfies never;
         return bookList;
       }
     }
   }, [formik.values.kind, formik.values.query, bookList]);
 
-  const [useModalStore] = useState(() => {
+  const modalState = useMemo(() => {
     return create<BookModalState & BookModalAction>()((set) => ({
       ...{
         mode: BookModalMode.None,
@@ -125,8 +124,7 @@ export const BookListPage: React.FC = () => {
         },
       },
     }));
-  });
-  const modalState = useModalStore();
+  }, []);
 
   return (
     <>
@@ -222,31 +220,4 @@ export const BookListPage: React.FC = () => {
                       <Button colorScheme="teal" onClick={() => modalState.openDetail(book.id)} variant="solid">
                         詳細
                       </Button>
-                    </Td>
-                    <Td verticalAlign="middle">
-                      <Text fontWeight="bold">{book.name}</Text>
-                      <Text color="gray.400" fontSize="small">
-                        {book.id}
-                      </Text>
-                    </Td>
-                    <Td verticalAlign="middle">
-                      <Text fontWeight="bold">{book.author.name}</Text>
-                      <Text color="gray.400" fontSize="small">
-                        {book.author.id}
-                      </Text>
-                    </Td>
-                  </Tr>
-                ))}
-              </Tbody>
-            </Table>
-          </TableContainer>
-        </StackItem>
-      </Stack>
-
-      {modalState.mode === BookModalMode.Detail ? (
-        <BookDetailModal isOpen bookId={modalState.params.bookId} onClose={() => modalState.close()} />
-      ) : null}
-      {modalState.mode === BookModalMode.Create ? <CreateBookModal isOpen onClose={() => modalState.close()} /> : null}
-    </>
-  );
-};
+                    </Td
